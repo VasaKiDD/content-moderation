@@ -24,7 +24,8 @@ def test_epoch(model, train_status, writer, test_loader):
     categories_accuracy = 0
     gender_accuracy = 0
     xxs_accuracy = 0
-    total_non_nulls = 0
+    total_gender_non_nulls = 0
+    total_category_non_nulls = 0
 
     acc = ClassificationAccuracy()
     spec_acc = SpecialClassificationAccuracy()
@@ -32,15 +33,21 @@ def test_epoch(model, train_status, writer, test_loader):
     for batch in tqdm(test_loader):
         input_images, target_categories, target_genders, target_xxs = batch
         pred_categories, pred_genders, pred_xxs = model(input_images.to(device))
-        categories_accuracy += acc(pred_categories, target_categories.to(device))
-        xxs_accuracy += acc(pred_xxs, target_xxs.to(device))
-        gender_acc, non_nulls = spec_acc(pred_genders, target_genders.to(device))
-        gender_accuracy += gender_acc
-        total_non_nulls += non_nulls
 
-    categories_accuracy /= test_loader.dataset.__len__()
-    xxs_accuracy /= test_loader.dataset.__len__()
-    gender_accuracy /= total_non_nulls
+        xxs_accuracy += acc(pred_xxs, target_xxs.to(device))
+        categories_acc, category_non_nulls = spec_acc(
+            pred_categories, target_categories.to(device)
+        )
+        gender_acc, gender_non_nulls = spec_acc(pred_genders, target_genders.to(device))
+
+        categories_accuracy += categories_acc
+        gender_accuracy += gender_acc
+        total_gender_non_nulls += gender_non_nulls
+        total_category_non_nulls += category_non_nulls
+
+    categories_accuracy /= total_category_non_nulls
+    xxs_accuracy /= validation_loader.dataset.__len__()
+    gender_accuracy /= total_gender_non_nulls
 
     writer.add_scalar(
         "Accuracy/test/0_to_5", categories_accuracy, train_status["batch"] * train_status["epoch"]
@@ -59,13 +66,14 @@ def test_epoch(model, train_status, writer, test_loader):
 
 def eval_epoch(model, train_status, writer, validation_loader):
 
-    print("Evaluating...")
+    print("Evaluating the model...")
 
     model.eval()
     categories_accuracy = 0
     gender_accuracy = 0
     xxs_accuracy = 0
-    total_non_nulls = 0
+    total_gender_non_nulls = 0
+    total_category_non_nulls = 0
 
     acc = ClassificationAccuracy()
     spec_acc = SpecialClassificationAccuracy()
@@ -73,15 +81,20 @@ def eval_epoch(model, train_status, writer, validation_loader):
     for batch in tqdm(validation_loader):
         input_images, target_categories, target_genders, target_xxs = batch
         pred_categories, pred_genders, pred_xxs = model(input_images.to(device))
-        categories_accuracy += acc(pred_categories, target_categories.to(device))
-        xxs_accuracy += acc(pred_xxs, target_xxs.to(device))
-        gender_acc, non_nulls = spec_acc(pred_genders, target_genders.to(device))
-        gender_accuracy += gender_acc
-        total_non_nulls += non_nulls
 
-    categories_accuracy /= validation_loader.dataset.__len__()
+        xxs_accuracy += acc(pred_xxs, target_xxs.to(device))
+        categories_acc, category_non_nulls = spec_acc(
+            pred_categories, target_categories.to(device)
+        )
+        gender_acc, gender_non_nulls = spec_acc(pred_genders, target_genders.to(device))
+        categories_accuracy += categories_acc
+        gender_accuracy += gender_acc
+        total_gender_non_nulls += gender_non_nulls
+        total_category_non_nulls += category_non_nulls
+
+    categories_accuracy /= total_category_non_nulls
     xxs_accuracy /= validation_loader.dataset.__len__()
-    gender_accuracy /= total_non_nulls
+    gender_accuracy /= total_gender_non_nulls
 
     writer.add_scalar(
         "Accuracy/val/0_to_5/", categories_accuracy, train_status["batch"] * train_status["epoch"]
@@ -113,15 +126,18 @@ def train_epoch(model, train_status, writer, train_loader, validation_loader, op
 
         pred_categories, pred_genders, pred_xxs = model(input_images.to(device))
 
-        categories_accuracy = (
-            acc(pred_categories, target_categories.to(device)) / params["training"]["batch_size"]
-        )
         xxs_accuracy = acc(pred_xxs, target_xxs.to(device)) / params["training"]["batch_size"]
-        gender_acc, non_nulls = spec_acc(pred_genders, target_genders.to(device))
-        gender_accuracy = gender_acc / non_nulls
 
-        category_loss = cross_entropy(pred_categories, target_categories.to(device))
+        categories_accuracy, category_non_nulls = spec_acc(
+            pred_categories, target_categories.to(device)
+        )
+        categories_accuracy = categories_accuracy / category_non_nulls
+
+        gender_acc, gender_non_nulls = spec_acc(pred_genders, target_genders.to(device))
+        gender_accuracy = gender_acc / gender_non_nulls
+
         xxs_loss = cross_entropy(pred_xxs, target_xxs.to(device))
+        category_loss = (-1.0 * log_softmax(pred_categories) * target_categories.to(device)).mean()
         gender_loss = (-1.0 * log_softmax(pred_genders) * target_genders.to(device)).mean()
 
         total_loss = 0.45 * category_loss + 0.275 * xxs_loss + 0.275 * gender_loss

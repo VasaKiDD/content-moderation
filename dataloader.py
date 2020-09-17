@@ -21,32 +21,34 @@ class XxxDataset(Dataset):
     def __getitem__(self, idx):
         image = Image.open(self.images[idx]).convert("RGB")
         label = self.images[idx].split("/")[1]
+        category = torch.FloatTensor([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         if "0" in label:
-            category = torch.tensor(0).long()
+            category[0] = 1.0
             xx = torch.tensor(0).long()
         if "1" in label:
-            category = torch.tensor(1).long()
+            category[1] = 1.0
             xx = torch.tensor(1).long()
         if "2" in label:
-            category = torch.tensor(2).long()
+            if "+" not in label:
+                category[2] = 1.0
             xx = torch.tensor(2).long()
         if "3" in label:
-            category = torch.tensor(3).long()
+            category[3] = 1.0
             xx = torch.tensor(2).long()
         if "4" in label:
-            category = torch.tensor(4).long()
+            category[4] = 1.0
             xx = torch.tensor(2).long()
         if "5" in label:
-            category = torch.tensor(5).long()
+            category[5] = 1.0
             xx = torch.tensor(2).long()
+
+        gender = torch.FloatTensor([0.0, 0.0, 0.0])
         if "man" in label:
-            gender = torch.FloatTensor([1.0, 0.0, 0.0])
-        elif "woman" in label:
-            gender = torch.FloatTensor([0.0, 1.0, 0.0])
-        elif "cartoon" in label:
-            gender = torch.FloatTensor([0.0, 0.0, 1.0])
-        else:
-            gender = torch.FloatTensor([0.0, 0.0, 0.0])
+            gender[0] = 1.0
+        if "woman" in label:
+            gender[1] = 1.0
+        if "cartoon" in label:
+            gender[2] = 1.0
 
         if self.transforms is not None:
             image = self.transforms(image)
