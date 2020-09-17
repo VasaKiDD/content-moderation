@@ -5,11 +5,11 @@ data_augmentation:
   hue: 0.0
 
 training:
-  batch_size: 54
+  batch_size: 128
   data_folder: "data"
   checkpoint_dir: "checkpoints"
   epochs: 32
-  eval_save_every: 25
+  eval_save_every: 400
   optimizer:
     period: 50000
     momentum: 0.9
