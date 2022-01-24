@@ -1,6 +1,6 @@
 # Content-moderation
 
-This project was developped to train a multi-level classification model for content moderation in images.
+This project was developped to train a multi-level classification model with neural networks for content moderation in images.
 
 ## Create Python Virtual Env
 
